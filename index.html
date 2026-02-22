@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>KegCalc</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="KegCalc" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      padding-bottom: 96px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    header {
+      background: #4f46e5;
+      color: white;
+      padding: 24px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 448px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title { font-size: 20px; font-weight: 900; letter-spacing: -.025em; line-height: 1; }
+    .header-sub { font-size: 10px; opacity: .7; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+    .header-icon {
+      width: 32px; height: 32px;
+      background: #6366f1;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #818cf8;
+    }
+    main { max-width: 448px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 24px; }
+
+    /* Pages */
+    .page { display: none; flex-direction: column; gap: 24px; }
+    .page.active { display: flex; }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 25px -5px rgba(100,116,139,.08), 0 8px 10px -6px rgba(100,116,139,.06);
+      border: 1px solid #f1f5f9;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    /* Keg type buttons */
+    .keg-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .keg-btn {
+      padding: 12px 4px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid #f1f5f9;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .keg-btn:active { transform: scale(.95); }
+    .keg-btn.active {
+      background: #4f46e5;
+      color: white;
+      border-color: #4f46e5;
+      box-shadow: 0 4px 6px -1px rgba(79,70,229,.3);
+    }
+
+    /* Inputs */
+    input[type=number] {
+      width: 100%;
+      background: #f8fafc;
+      border: 2px solid #f1f5f9;
+      border-radius: 16px;
+      padding: 16px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f172a;
+      outline: none;
+      transition: all .15s;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.04);
+      -webkit-appearance: none;
+    }
+    input[type=number]:focus { border-color: #6366f1; background: white; }
+    input[type=number]::placeholder { color: #cbd5e1; }
+
+    /* Calculate button */
+    .calc-btn {
+      width: 100%;
+      background: #4f46e5;
+      color: white;
+      font-weight: 900;
+      font-size: 14px;
+      padding: 20px;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      box-shadow: 0 20px 25px -5px rgba(79,70,229,.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all .15s;
+    }
+    .calc-btn:hover { background: #4338ca; }
+    .calc-btn:active { transform: scale(.98); }
+
+    /* Results */
+    .results-card { border-radius: 24px; overflow: hidden; }
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 24px 24px 0; }
+    .metric-box { background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #f1f5f9; }
+    .metric-label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+    .metric-value { font-size: 24px; font-weight: 900; }
+    .text-indigo { color: #4f46e5; }
+    .text-rose { color: #f43f5e; }
+    .text-emerald { color: #10b981; }
+
+    .efficiency-block { padding: 16px 24px 0; }
+    .efficiency-inner {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 20px;
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,.2);
+    }
+    .eff-row { display: flex; justify-content: space-between; align-items: center; }
+    .eff-label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+    .eff-val { font-size: 30px; font-weight: 900; line-height: 1.1; }
+    .waste-label { font-size: 10px; color: #fb7185; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; text-align: right; }
+    .waste-val { font-size: 20px; font-weight: 700; color: #fda4af; text-align: right; }
+    .progress-track { margin-top: 16px; background: #1e293b; height: 8px; border-radius: 99px; overflow: hidden; }
+    .progress-bar { height: 100%; border-radius: 99px; transition: width 1s ease; }
+    .bar-good { background: #10b981; }
+    .bar-warn { background: #f59e0b; }
+    .bar-bad { background: #f43f5e; }
+
+    .pallet-section { background: rgba(238,242,255,.5); padding: 24px; border-top: 1px solid #e0e7ff; }
+    .pallet-title { font-size: 10px; font-weight: 900; color: #3730a3; text-transform: uppercase; letter-spacing: .2em; margin-bottom: 16px; }
+    .pallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pallet-box {
+      background: white; padding: 16px; border-radius: 16px;
+      border: 1px solid #c7d2fe; box-shadow: 0 1px 2px rgba(0,0,0,.05);
+      display: flex; align-items: center; gap: 16px;
+    }
+    .pallet-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; flex-shrink: 0;
+    }
+    .icon-full { background: #4f46e5; color: white; }
+    .icon-rem  { background: #e0e7ff; color: #4f46e5; }
+    .pallet-num { font-size: 20px; font-weight: 900; color: #1e1b4b; line-height: 1; }
+    .pallet-sub { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-top: 2px; }
+
+    .delete-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      border: none; cursor: pointer; flex-shrink: 0;
+      background: #fee2e2; color: #dc2626;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .delete-btn:hover { background: #fecaca; }
+    .delete-btn:active { transform: scale(.9); }
+    body.dark .delete-btn { background: #450a0a; color: #fca5a5; }
+    body.dark .delete-btn:hover { background: #7f1d1d; }
+
+    /* History page */
+    .history-empty { text-align: center; padding: 64px 24px; color: #94a3b8; }
+    .history-empty svg { margin: 0 auto 16px; display: block; opacity: .35; }
+    .history-empty p { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .history-empty span { font-size: 12px; }
+
+    .history-list { display: flex; flex-direction: column; gap: 12px; }
+    .history-item {
+      background: white; padding: 16px; border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid #f1f5f9;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .history-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+    .history-icon {
+      width: 40px; height: 40px; background: #f8fafc; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #94a3b8; font-size: 12px;
+    }
+    .history-kegs { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .history-time { font-size: 10px; color: #94a3b8; font-weight: 500; margin-top: 2px; }
+    .history-litres { font-size: 14px; font-weight: 900; color: #4f46e5; }
+    .history-loss-good { font-size: 10px; font-weight: 700; color: #10b981; text-align: right; }
+    .history-loss-warn { font-size: 10px; font-weight: 700; color: #f59e0b; text-align: right; }
+    .history-loss-bad  { font-size: 10px; font-weight: 700; color: #f43f5e; text-align: right; }
+
+    .clear-btn {
+      background: #fee2e2; color: #dc2626; border: none; border-radius: 12px;
+      padding: 12px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: all .15s; align-self: flex-end;
+    }
+    .clear-btn:hover { background: #fecaca; }
+    .clear-btn:active { transform: scale(.97); }
+
+    /* ── Dark mode ── */
+    body.dark {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    body.dark header { background: #312e81; }
+    body.dark .header-icon { background: #3730a3; border-color: #4f46e5; }
+    body.dark .card {
+      background: #1e293b;
+      border-color: #334155;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,.3);
+    }
+    body.dark .label { color: #64748b; }
+    body.dark .keg-btn {
+      background: #1e293b;
+      border-color: #334155;
+      color: #94a3b8;
+    }
+    body.dark .keg-btn.active {
+      background: #4f46e5;
+      color: white;
+      border-color: #4f46e5;
+    }
+    body.dark input[type=number] {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e2e8f0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.3);
+    }
+    body.dark input[type=number]:focus { border-color: #6366f1; background: #1e293b; }
+    body.dark input[type=number]::placeholder { color: #475569; }
+    body.dark .metric-box { background: #0f172a; border-color: #334155; }
+    body.dark .metric-label { color: #64748b; }
+    body.dark .pallet-section { background: rgba(49,46,129,.25); border-color: #312e81; }
+    body.dark .pallet-title { color: #818cf8; }
+    body.dark .pallet-box { background: #1e293b; border-color: #3730a3; }
+    body.dark .pallet-num { color: #c7d2fe; }
+    body.dark .pallet-sub { color: #64748b; }
+    body.dark .history-empty { color: #475569; }
+    body.dark .history-item { background: #1e293b; border-color: #334155; }
+    body.dark .history-icon { background: #0f172a; color: #64748b; }
+    body.dark .history-kegs { color: #e2e8f0; }
+    body.dark .history-time { color: #64748b; }
+    body.dark .clear-btn { background: #450a0a; color: #fca5a5; }
+    body.dark .clear-btn:hover { background: #7f1d1d; }
+    body.dark nav { background: rgba(2,6,23,.97); border-color: rgba(255,255,255,.07); }
+    body.dark nav button { color: #475569; }
+    body.dark nav button.active { color: #818cf8; }
+
+    /* Settings page */
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    body.dark .settings-row { border-color: #334155; }
+    .settings-label { font-size: 15px; font-weight: 600; color: #1e293b; }
+    body.dark .settings-label { color: #e2e8f0; }
+    .settings-sub { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    body.dark .settings-sub { color: #64748b; }
+    .settings-section-title {
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .1em; padding: 0 4px; margin-bottom: -8px;
+    }
+    .settings-value { font-size: 13px; font-weight: 700; color: #4f46e5; flex-shrink: 0; margin-left: 12px; }
+
+    /* Toggle switch */
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .toggle {
+      position: relative; width: 52px; height: 30px; cursor: pointer;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: #e2e8f0;
+      border-radius: 99px;
+      transition: background .2s;
+    }
+    body.dark .toggle-track { background: #334155; }
+    .toggle input:checked ~ .toggle-track { background: #4f46e5; }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 24px; height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: transform .2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(22px); }
+    .toggle-icon { font-size: 18px; line-height: 1; }
+
+    /* Bottom Nav */
+    nav {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(15,23,42,.95); backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px); color: white; border-radius: 24px;
+      padding: 10px 28px; display: flex; align-items: center; gap: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,.4); z-index: 20;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    nav button {
+      background: none; border: none; cursor: pointer; color: #64748b;
+      transition: color .15s; padding: 4px 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    nav button.active { color: #818cf8; }
+    nav button:hover { color: #818cf8; }
+    .nav-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Animate in */
+    @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .animate-in { animation: fadein .25s ease; }
+
+    /* Confirm modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+      padding: 24px;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: white; border-radius: 24px; padding: 24px;
+      width: 100%; max-width: 448px;
+      transform: translateY(20px); transition: transform .2s;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,.3);
+    }
+    .modal-overlay.show .modal { transform: translateY(0); }
+    body.dark .modal { background: #1e293b; }
+    .modal-title { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+    body.dark .modal-title { color: #e2e8f0; }
+    .modal-sub { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    .modal-btns { display: flex; gap: 12px; }
+    .modal-cancel {
+      flex: 1; padding: 14px; border-radius: 14px; border: 2px solid #e2e8f0;
+      background: transparent; font-size: 14px; font-weight: 700; color: #64748b;
+      cursor: pointer; transition: all .15s;
+    }
+    body.dark .modal-cancel { border-color: #334155; color: #94a3b8; }
+    .modal-cancel:hover { border-color: #94a3b8; }
+    .modal-confirm {
+      flex: 1; padding: 14px; border-radius: 14px; border: none;
+      background: #dc2626; color: white; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .modal-confirm:hover { background: #b91c1c; }
+    .modal-confirm:active { transform: scale(.97); }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="header-title" id="headerTitle">KEGCALC</div>
+      <div class="header-sub" id="headerSub">Production Analytics</div>
+    </div>
+    <div class="header-icon">
+      <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── CALCULATOR PAGE ── -->
+  <div id="page-calc" class="page active">
+    <section class="card">
+      <div>
+        <span class="label">Keg Standard</span>
+        <div class="keg-grid" id="kegGrid">
+          <button class="keg-btn active" data-type="20L">20L</button>
+          <button class="keg-btn" data-type="30L">30L</button>
+          <button class="keg-btn" data-type="30EE">30EE</button>
+          <button class="keg-btn" data-type="PET">PET</button>
+          <button class="keg-btn" data-type="30UA">30UA</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <label class="label" for="productAmount">Total Product (L)</label>
+          <input type="number" id="productAmount" inputmode="decimal" placeholder="0.00" />
+        </div>
+        <div>
+          <label class="label" for="kegsMade">Kegs Filled (Count)</label>
+          <input type="number" id="kegsMade" inputmode="numeric" placeholder="0" />
+        </div>
+      </div>
+      <button class="calc-btn" onclick="calculate()">
+        <span>Generate Analysis</span>
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </button>
+    </section>
+
+    <section id="results" class="hidden">
+      <div class="card results-card" style="padding:0;gap:0;">
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-label">Yield (L)</div>
+            <div class="metric-value text-indigo" id="resYield">—</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Loss (L)</div>
+            <div class="metric-value" id="resLoss">—</div>
+          </div>
+        </div>
+        <div class="efficiency-block">
+          <div class="efficiency-inner">
+            <div class="eff-row">
+              <div>
+                <div class="eff-label">Efficiency Rating</div>
+                <div class="eff-val" id="resEfficiency">—</div>
+              </div>
+              <div>
+                <div class="waste-label">Waste Factor</div>
+                <div class="waste-val" id="resWaste">—</div>
+              </div>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar bar-good" id="progressBar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="pallet-section">
+          <div class="pallet-title">Pallet Logistics</div>
+          <div class="pallet-grid">
+            <div class="pallet-box">
+              <div class="pallet-icon icon-full">P</div>
+              <div>
+                <div class="pallet-num" id="resFullPallets">—</div>
+                <div class="pallet-sub">Full Pallets</div>
+              </div>
+            </div>
+            <div class="pallet-box">
+              <div class="pallet-icon icon-rem">K</div>
+              <div>
+                <div class="pallet-num" id="resRemKegs">—</div>
+                <div class="pallet-sub">Last Pallet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── HISTORY PAGE ── -->
+  <div id="page-history" class="page">
+    <div id="historyEmpty" class="history-empty">
+      <svg width="52" height="52" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      <p>No runs yet</p>
+      <span>Your production history will appear here</span>
+    </div>
+    <button id="clearBtn" class="clear-btn hidden" onclick="clearHistory()">Clear History</button>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- ── SETTINGS PAGE ── -->
+  <div id="page-settings" class="page">
+    <div class="card">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Dark Mode</div>
+          <div class="settings-sub">Switch to a darker interface</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-icon" id="toggleIcon">☀️</span>
+          <label class="toggle">
+            <input type="checkbox" id="darkToggle" onchange="toggleDark(this.checked)" />
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="settings-section-title">Keg Reference</div>
+      <div>
+        <div class="settings-row">
+          <div><div class="settings-label">20L</div><div class="settings-sub">Standard 20 litre keg</div></div>
+          <div class="settings-value">24 / pallet</div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">30L</div><div class="settings-sub">Standard 30 litre keg</div></div>
+          <div class="settings-value">24 / pallet</div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">30EE</div><div class="settings-sub">30 litre Euro keg</div></div>
+          <div class="settings-value">18 / pallet</div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">PET</div><div class="settings-sub">30 litre PET keg</div></div>
+          <div class="settings-value">16 / pallet</div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">30UA</div><div class="settings-sub">30 litre UA keg</div></div>
+          <div class="settings-value">6 / pallet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<nav>
+  <button id="nav-calc" class="active" onclick="showPage('calc')">
+    <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2v-4H8v-2h4V7h2v4h4v2h-4v4z"/></svg>
+    <span class="nav-label">Calc</span>
+  </button>
+  <button id="nav-history" onclick="showPage('history')">
+    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    <span class="nav-label">History</span>
+  </button>
+  <button id="nav-settings" onclick="showPage('settings')">
+    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span class="nav-label">Settings</span>
+  </button>
+</nav>
+
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <div class="modal-title" id="confirmTitle">Delete this run?</div>
+    <div class="modal-sub" id="confirmSub">This action cannot be undone.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="modal-confirm" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+
+  // ── Dark mode ──
+  function toggleDark(on) {
+    document.body.classList.toggle('dark', on);
+    document.getElementById('toggleIcon').textContent = on ? '🌙' : '☀️';
+    localStorage.setItem('darkMode', on ? '1' : '0');
+  }
+
+  // Init dark mode from saved pref
+  (function() {
+    const saved = localStorage.getItem('darkMode');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const on = saved !== null ? saved === '1' : prefersDark;
+    if (on) {
+      document.body.classList.add('dark');
+      document.getElementById('darkToggle').checked = true;
+      document.getElementById('toggleIcon').textContent = '🌙';
+    }
+  })();
+
+  const KEG_CONFIGS = {
+    '20L':  { volume: 20, perPallet: 24 },
+    '30L':  { volume: 30, perPallet: 24 },
+    '30EE': { volume: 30, perPallet: 18 },
+    'PET':  { volume: 30, perPallet: 16 },
+    '30UA': { volume: 30, perPallet: 6 }
+  };
+
+  const PAGE_META = {
+    calc:     { title: 'KEGCALC',  sub: 'Production Analytics' },
+    history:  { title: 'HISTORY',  sub: 'Production Runs' },
+    settings: { title: 'SETTINGS', sub: 'Configuration' }
+  };
+
+  let selectedKeg = '20L';
+  let history = JSON.parse(localStorage.getItem('kegHistory') || '[]');
+
+  // ── Navigation ──
+  function showPage(name) {
+    if (name === 'history') renderHistoryPage();
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+    const page = document.getElementById('page-' + name);
+    page.classList.add('active');
+    page.classList.remove('animate-in');
+    void page.offsetWidth;
+    page.classList.add('animate-in');
+
+    document.getElementById('nav-' + name).classList.add('active');
+    document.getElementById('headerTitle').textContent = PAGE_META[name].title;
+    document.getElementById('headerSub').textContent = PAGE_META[name].sub;
+  }
+
+  // ── Keg type selector ──
+  document.getElementById('kegGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.keg-btn');
+    if (!btn) return;
+    document.querySelectorAll('.keg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedKeg = btn.dataset.type;
+  });
+
+  // ── Calculate ──
+  function calculate() {
+    const b = parseFloat(document.getElementById('productAmount').value);
+    const c = parseInt(document.getElementById('kegsMade').value);
+
+    if (isNaN(b) || isNaN(c) || b <= 0 || c < 0) {
+      alert('Please enter valid numbers for product amount and kegs made.');
+      return;
+    }
+
+    const config = KEG_CONFIGS[selectedKeg];
+    const filledLitres = config.volume * c;
+    const wasteLitres = b - filledLitres;
+    const wastePercentage = (wasteLitres / b) * 100;
+    const fullPallets = Math.floor(c / config.perPallet);
+    const remainingKegs = c % config.perPallet;
+
+    const result = {
+      filledLitres, wasteLitres, wastePercentage,
+      fullPallets, remainingKegs, totalKegs: c,
+      kegType: selectedKeg, availableProduct: b,
+      timestamp: Date.now()
+    };
+
+    history = [result, ...history].slice(0, 50);
+    localStorage.setItem('kegHistory', JSON.stringify(history));
+    renderResults(result);
+  }
+
+  function renderResults(r) {
+    document.getElementById('resYield').textContent = r.filledLitres;
+
+    const lossEl = document.getElementById('resLoss');
+    lossEl.textContent = r.wasteLitres.toFixed(1);
+    lossEl.className = 'metric-value ' + (r.wasteLitres > 0 ? 'text-rose' : 'text-emerald');
+
+    document.getElementById('resEfficiency').textContent = (100 - r.wastePercentage).toFixed(1) + '%';
+    document.getElementById('resWaste').textContent = r.wastePercentage.toFixed(2) + '%';
+
+    const bar = document.getElementById('progressBar');
+    bar.style.width = Math.max(0, 100 - r.wastePercentage) + '%';
+    const barColor = r.wastePercentage < 3 ? 'bar-good' : r.wastePercentage <= 5 ? 'bar-warn' : 'bar-bad';
+    bar.className = 'progress-bar ' + barColor;
+
+    const effVal = document.getElementById('resEfficiency');
+    const effColor = r.wastePercentage < 3 ? '#10b981' : r.wastePercentage <= 5 ? '#f59e0b' : '#f43f5e';
+    effVal.style.color = effColor;
+
+    const wasteVal = document.getElementById('resWaste');
+    wasteVal.style.color = r.wastePercentage < 3 ? '#6ee7b7' : r.wastePercentage <= 5 ? '#fcd34d' : '#fda4af';
+
+    document.getElementById('resFullPallets').textContent = r.fullPallets;
+    document.getElementById('resRemKegs').textContent = r.remainingKegs;
+
+    const sec = document.getElementById('results');
+    sec.classList.remove('hidden', 'animate-in');
+    void sec.offsetWidth;
+    sec.classList.add('animate-in');
+  }
+
+  // ── History ──
+  function renderHistoryPage() {
+    const empty = document.getElementById('historyEmpty');
+    const clearBtn = document.getElementById('clearBtn');
+    const list = document.getElementById('historyList');
+
+    if (history.length === 0) {
+      empty.classList.remove('hidden');
+      clearBtn.classList.add('hidden');
+      list.innerHTML = '';
+      return;
+    }
+
+    empty.classList.add('hidden');
+    clearBtn.classList.remove('hidden');
+
+    list.innerHTML = history.map((item, idx) => `
+      <div class="history-item">
+        <div class="history-left">
+          <div class="history-icon">${item.kegType.substring(0,2)}</div>
+          <div>
+            <div class="history-kegs">${item.totalKegs} × ${item.kegType} Kegs</div>
+            <div class="history-time">${new Date(item.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+          <div style="text-align:right;">
+            <div class="history-litres">${item.filledLitres}L</div>
+            <div class="${item.wastePercentage < 3 ? 'history-loss-good' : item.wastePercentage <= 5 ? 'history-loss-warn' : 'history-loss-bad'}">${item.wastePercentage.toFixed(1)}% Loss</div>
+          </div>
+          <button class="delete-btn" onclick="deleteRecord(${idx})" title="Delete">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Confirm modal ──
+  let confirmCallback = null;
+
+  function showConfirm(title, sub, onOk) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmSub').textContent = sub;
+    confirmCallback = onOk;
+    document.getElementById('confirmOverlay').classList.add('show');
+    document.getElementById('confirmOkBtn').onclick = () => { closeConfirm(); onOk(); };
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    confirmCallback = null;
+  }
+
+  // Close on backdrop tap
+  document.getElementById('confirmOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  function deleteRecord(idx) {
+    showConfirm('Delete this run?', 'This action cannot be undone.', () => {
+      history.splice(idx, 1);
+      localStorage.setItem('kegHistory', JSON.stringify(history));
+      renderHistoryPage();
+    });
+  }
+
+  function clearHistory() {
+    showConfirm('Clear all history?', 'All production runs will be permanently removed.', () => {
+      history = [];
+      localStorage.removeItem('kegHistory');
+      renderHistoryPage();
+    });
+  }
+</script>
+</body>
+</html>

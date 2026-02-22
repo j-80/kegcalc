@@ -1,0 +1,26 @@
+{
+  "name": "KegCalc Production Pro",
+  "short_name": "KegCalc",
+  "description": "Brewery keg production calculator — yield, waste, and pallet logistics.",
+  "start_url": "/kegcalc/index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4f46e5",
+  "background_color": "#f8fafc",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/948/948615.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/948/948615.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
